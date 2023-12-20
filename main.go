@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	var rootCmd = &cobra.Command{Use: "myapp"}
+	var rootCmd = &cobra.Command{Use: "git-helper"}
 
 	var githubToken, username string
 	var dateRange int
