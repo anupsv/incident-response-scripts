@@ -138,7 +138,7 @@ func findPRForCommit(commitSHA, repo, token, githubAPIEndpoint string) (string, 
 }
 
 func fetchCommitsPage(username, token string, page int, githubAPIEndpoint string) ([]Commit, error) {
-	url := fmt.Sprintf("https://api.github.com/users/%s/events?page=%d", username, page)
+	url := fmt.Sprintf("%s/users/%s/events?page=%d", githubAPIEndpoint, username, page)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
