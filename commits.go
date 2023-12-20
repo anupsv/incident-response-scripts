@@ -11,67 +11,73 @@ import (
 )
 
 // Commit represents a GitHub commit.
-type Commit struct {
-	SHA        string `json:"sha"`
-	Repository string `json:"repository"`
-	PRURL      string `json:"pr_url"`
-	Commit     struct {
-		Author struct {
-			Name string `json:"name"`
-			Date string `json:"date"`
-		} `json:"author"`
-		Message string `json:"message"`
-	} `json:"commit"`
-}
+//type Commit struct {
+//	SHA        string `json:"sha"`
+//	Repository string `json:"repository"`
+//	PRURL      string `json:"pr_url"`
+//	Commit     struct {
+//		Author struct {
+//			Name string `json:"name"`
+//			Date string `json:"date"`
+//		} `json:"author"`
+//		Message string `json:"message"`
+//	} `json:"commit"`
+//}
 
 // FetchCommits fetches commits made by a specified user.
-func FetchCommits(username, token, sortOrder string, dateRange int, mapToPR bool, githubAPIEndpoint string) ([]Commit, error) {
-	var allCommits []Commit
+func FetchCommits(username, token, sortOrder string, dateRange int, mapToPR bool, githubAPIEndpoint string) ([]CustomCommitData, error) {
+	var allCommits []CustomCommitData
 	page := 1
 	startDate := time.Now().AddDate(0, -dateRange, 0)
 
 	for {
-		var commits []Commit
+		var events []Event
 		var err error
-		commits, err = fetchCommitsPage(username, token, page, githubAPIEndpoint)
+		events, err = fetchCommitsPage(username, token, page, githubAPIEndpoint)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(commits) == 0 {
+		if len(events) == 0 {
 			break
 		}
 
-		for _, commit := range commits {
-			commitDate, err := time.Parse(time.RFC3339, commit.Commit.Author.Date)
+		for _, event := range events {
+			commitDate, err := time.Parse(time.RFC3339, event.CreatedAt)
 			if err != nil {
 				fmt.Println("Error parsing commit date:", err)
 				continue
 			}
 
 			if commitDate.After(startDate) {
-				allCommits = append(allCommits, commit)
+
+				for _, eachCommit := range event.Payload.Commits {
+					allCommits = append(allCommits, CustomCommitData{
+						Commit: eachCommit,
+						Repo:   event.Repo,
+						Date:   event.CreatedAt,
+					})
+				}
 			}
 		}
 
 		if mapToPR {
-			for i, commit := range allCommits {
-				prURL, err := findPRForCommit(commit.SHA, commit.Repository, token, githubAPIEndpoint)
+			for i, eachCommit := range allCommits {
+				prURL, err := findPRForCommit(eachCommit.Commit.SHA, eachCommit.Repo.Name, token, githubAPIEndpoint)
 				if err != nil {
 					fmt.Println("Error finding PR for commit:", err)
 					continue
 				}
-				allCommits[i].PRURL = prURL
+				allCommits[i].PrUrl = prURL
 			}
 		}
-
 		page++
 	}
 
 	// Sort commits based on sortOrder
 	sort.Slice(allCommits, func(i, j int) bool {
-		timeI, _ := time.Parse(time.RFC3339, allCommits[i].Commit.Author.Date)
-		timeJ, _ := time.Parse(time.RFC3339, allCommits[j].Commit.Author.Date)
+		timeI, _ := time.Parse(time.RFC3339, allCommits[i].Date)
+		timeJ, _ := time.Parse(time.RFC3339, allCommits[j].Date)
 		if sortOrder == "asc" {
 			return timeI.Before(timeJ)
 		}
@@ -142,7 +148,7 @@ func findPRForCommit(commitSHA, repo, token, githubAPIEndpoint string) (string, 
 	return "", nil
 }
 
-func fetchCommitsPage(username, token string, page int, githubAPIEndpoint string) ([]Commit, error) {
+func fetchCommitsPage(username, token string, page int, githubAPIEndpoint string) ([]Event, error) {
 	url := fmt.Sprintf("%s/users/%s/events?page=%d", githubAPIEndpoint, username, page)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -178,24 +184,19 @@ func fetchCommitsPage(username, token string, page int, githubAPIEndpoint string
 		return nil, err
 	}
 
-	var events []struct {
-		Type    string `json:"type"`
-		Payload struct {
-			Commits []Commit `json:"commits"`
-		} `json:"payload"`
-	}
+	var receivedEvents []Event
 
-	err = json.Unmarshal(body, &events)
+	err = json.Unmarshal(body, &receivedEvents)
 	if err != nil {
 		return nil, err
 	}
 
-	var commits []Commit
-	for _, event := range events {
+	var toSendEvents []Event
+	for _, event := range receivedEvents {
 		if event.Type == "PushEvent" {
-			commits = append(commits, event.Payload.Commits...)
+			toSendEvents = append(toSendEvents, event)
 		}
 	}
 
-	return commits, nil
+	return toSendEvents, nil
 }
