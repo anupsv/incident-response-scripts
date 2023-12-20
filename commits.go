@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -100,7 +100,12 @@ func findPRForCommit(commitSHA, repo, token, githubAPIEndpoint string) (string, 
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Println("unable to close body reader")
+		}
+	}(resp.Body)
 
 	// Handle rate limiting
 	if resp.StatusCode == http.StatusForbidden {
@@ -116,7 +121,7 @@ func findPRForCommit(commitSHA, repo, token, githubAPIEndpoint string) (string, 
 		return "", fmt.Errorf("failed to fetch pull requests: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -151,7 +156,12 @@ func fetchCommitsPage(username, token string, page int, githubAPIEndpoint string
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Println("unable to close body reader")
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch commits: %s", resp.Status)
@@ -163,7 +173,7 @@ func fetchCommitsPage(username, token string, page int, githubAPIEndpoint string
 		return nil, fmt.Errorf("rate limit exceeded")
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
