@@ -14,6 +14,8 @@ func main() {
 	var sortOrder string
 	var organization string
 	var outputType, outputFile string
+	var mapToPR bool
+	var githubAPIEndpoint string
 
 	var cmdFetchPRData = &cobra.Command{
 		Use:   "fetch-pr-data",
@@ -37,7 +39,7 @@ func main() {
 				return
 			}
 
-			commits, err := FetchCommits(username, githubToken, sortOrder)
+			commits, err := FetchCommits(username, githubToken, sortOrder, validDateRange, mapToPR, githubAPIEndpoint)
 			if err != nil {
 				fmt.Println("Error fetching commits:", err)
 				return
@@ -90,6 +92,8 @@ func main() {
 	cmdFetchCommits.Flags().StringVarP(&outputType, "output-type", "x", "console", "Output type (console, csv, json)")
 	cmdFetchPRData.Flags().StringVarP(&outputFile, "output-file", "f", "", "Output file name (optional)")
 	cmdFetchCommits.Flags().IntVarP(&dateRange, "date-range", "d", 1, "Date range in months")
+	cmdFetchCommits.Flags().BoolVarP(&mapToPR, "map-to-pr", "m", false, "Map commits to pull requests if applicable")
+	cmdFetchCommits.Flags().StringVarP(&githubAPIEndpoint, "github-api-endpoint", "g", "https://api.github.com", "GitHub API endpoint")
 
 	rootCmd.AddCommand(cmdFetchPRData)
 	rootCmd.AddCommand(cmdFetchCommits)

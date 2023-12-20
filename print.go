@@ -23,18 +23,19 @@ func convertToLocalTime(dateStr string) string {
 
 func printCommitsInTable(commits []Commit) {
 	const maxMessageLength = 50
-	header := "SHA\tDate\t\tAuthor\tMessage\tURL"
+	header := "SHA\tDate\t\tAuthor\tMessage\tURL\tPR"
 	fmt.Println(header)
 	fmt.Println(strings.Repeat("-", len(header)))
 
 	for _, commit := range commits {
+		localDate := convertToLocalTime(commit.Commit.Author.Date)
 		message := commit.Commit.Message
 		url := fmt.Sprintf("https://github.com/%s/commit/%s", commit.Repository, commit.SHA)
 		if len(message) > maxMessageLength {
 			message = message[:maxMessageLength-3] + "..."
 		}
-		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", commit.SHA[:7], convertToLocalTime(commit.Commit.Author.Date),
-			commit.Commit.Author.Name, message, url)
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", commit.SHA, localDate, commit.Commit.Author.Name, commit.Commit.Message, url, commit.PRURL)
+
 	}
 }
 
