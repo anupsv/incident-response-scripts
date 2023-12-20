@@ -10,20 +10,6 @@ import (
 	"time"
 )
 
-// Commit represents a GitHub commit.
-//type Commit struct {
-//	SHA        string `json:"sha"`
-//	Repository string `json:"repository"`
-//	PRURL      string `json:"pr_url"`
-//	Commit     struct {
-//		Author struct {
-//			Name string `json:"name"`
-//			Date string `json:"date"`
-//		} `json:"author"`
-//		Message string `json:"message"`
-//	} `json:"commit"`
-//}
-
 // FetchCommits fetches commits made by a specified user.
 func FetchCommits(username, token, sortOrder string, dateRange int, mapToPR bool, githubAPIEndpoint string) ([]CustomCommitData, error) {
 	var allCommits []CustomCommitData
